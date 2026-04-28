@@ -314,33 +314,31 @@ app.post('/api/generate', async (req, res) => {
   let fullPlan = '';
 
   try {
-    const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    });
+  const stream = anthropic.messages.stream({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2000,
+    messages: [{ role: 'user', content: prompt }],
+  });
 
-    stream.on('text', (text) => {
-      fullPlan += text;
-      res.write(`data: ${JSON.stringify({ text })}\n\n`);
-    });
+  stream.on('text', (text) => {
+    res.write('data: ' + JSON.stringify({ text }) + '\n\n');
+  });
 
-    await stream.finalMessage();
+  stream.on('error', (err) => {
+    console.error('Stream error:', err.message);
+    res.write('data: ' + JSON.stringify({ text: 'Error: ' + err.message }) + '\n\n');
+  });
 
-    // Save generated plan to DB
-    await supabase.from('payments').update({
-      plan_text: fullPlan,
-      plan_generated: true,
-      plan_generated_at: new Date(),
-    }).eq('id', session_id);
-
-    res.write('data: [DONE]\n\n');
-    res.end();
-  } catch(e) {
-    console.error('Generation error:', e);
-    res.write(`data: ${JSON.stringify({ error: 'Generation failed' })}\n\n`);
-    res.end();
-  }
+  const final = await stream.finalMessage();
+  console.log('Stream done. Stop reason:', final.stop_reason);
+  res.write('data: [DONE]\n\n');
+  res.end();
+} catch(e) {
+  console.error('Generate-free error:', e.message);
+  res.write('data: ' + JSON.stringify({ text: 'Failed: ' + e.message }) + '\n\n');
+  res.write('data: [DONE]\n\n');
+  res.end();
+}
 });
 
 // ═══════════════════════════════════════════════════════════
