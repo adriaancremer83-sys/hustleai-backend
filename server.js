@@ -448,6 +448,30 @@ app.get('/api/admin/revenue', requireAdmin, async (req, res) => {
 });
 
 // ── START ────────────────────────────────────────────────────
+app.post('/api/generate-free', async (req, res) => {
+  const { answers, name } = req.body;
+  if (!answers) return res.status(400).json({ error: 'Missing answers' });
+  const prompt = buildPrompt(answers, name || '');
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  try {
+    const stream = anthropic.messages.stream({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }],
+    });
+    stream.on('text', (text) => {
+      res.write(data: ${JSON.stringify({ text })}\n\n);
+    });
+    await stream.finalMessage();
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch(e) {
+    res.write(data: ${JSON.stringify({ error: 'Failed' })}\n\n);
+    res.end();
+  }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`HustleAI backend running on port ${PORT}`));
 
