@@ -462,13 +462,13 @@ app.post('/api/generate-free', async (req, res) => {
       messages: [{ role: 'user', content: prompt }],
     });
     stream.on('text', (text) => {
-      res.write(data: ${JSON.stringify({ text })}\n\n);
+      res.write('data: ' + JSON.stringify({ text }) + '\n\n');
     });
     await stream.finalMessage();
     res.write('data: [DONE]\n\n');
     res.end();
   } catch(e) {
-    res.write(data: ${JSON.stringify({ error: 'Failed' })}\n\n);
+    res.write('data: ' + JSON.stringify({ error: 'Failed' }) + '\n\n');
     res.end();
   }
 });
